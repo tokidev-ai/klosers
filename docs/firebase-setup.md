@@ -9,22 +9,24 @@ There is one Firebase project: `leadport-dev`, display name **klosers**. The CLI
 | Item | State |
 | --- | --- |
 | Project | Created |
-| Blaze plan | Not yet: no billing account is linked |
+| Blaze plan | On |
 | Firestore | Created in `nam5` (United States), Native mode |
 | Functions region | `us-central1`, set in `functions/src/config.ts` to match `nam5` |
 | Storage | No bucket yet |
-| Hosting | No site yet |
+| Hosting | Default site `leadport-dev` |
 | Web app | Registered as "LeadPort Web" |
 | Authentication | Not started |
 | App Check | Not started |
-| Secrets | Secret Manager not enabled yet |
-| Budget alert | Not set |
+| Secrets | All four created, with the value `pending` |
+| Budget alert | $10 a month, alerts at 50%, 90% and 100% |
 
 ## Region
 
 Firestore already exists in `nam5`, and a database location can never change. Firestore triggers must run in the database's region, so every function runs in `us-central1`. Calls from Bolivia take a little longer than they would to São Paulo, which is fine for about 5 users. A region in South America would need a new project.
 
 ## 1. Blaze plan, Storage and Hosting (#55)
+
+Done: the Blaze plan and Hosting. Still to do: the Storage bucket.
 
 Cloud Functions, Secret Manager and the Storage bucket all need the Blaze plan.
 
@@ -54,6 +56,8 @@ gcloud services enable recaptchaenterprise.googleapis.com --project="$PROJECT_ID
 ```
 
 ## 3. Budget alert and secrets (#57)
+
+Done: the budget alert and all four secrets. The commands stay here for reference.
 
 The paid-API budget decided in P0-01 is about $10 a month at launch. Set an alert at 50%, 90% and 100%:
 
