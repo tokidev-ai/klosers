@@ -22,11 +22,11 @@ Klosers CRM is a web app where a sales team keeps its clients in one place, find
 
 ## Roles and permissions
 
-Three roles cover the brief: Admin, Team lead and Member. Each role gives a default set of permissions, and an admin can switch individual permissions on or off for any user. Every member and team lead belongs to exactly one team, and a team lead leads only that team. Admins belong to no team: they can work in every team, switch between teams, or view all of them at once.
+Three roles cover the brief: Admin, Team lead and Member. Each role gives a default set of permissions. Per-user permission switches, where an admin turns individual permissions on or off for any user, come after the MVP (P5-06); until then, "Optional" permissions in the table are off for everyone. A member can belong to several teams, with one primary team, and picks the active team in the top bar. A team lead leads exactly one team. Admins belong to no team: they can work in every team, switch between teams, or view all of them at once.
 
 - **Admin** runs the whole organization: users, teams, permissions, services, pipeline stages and every dashboard. Admins manage several teams and their services at the same time.
 - **Team lead** manages one team's clients and calendars and sees that team's dashboard. A team lead can lead only one team.
-- **Member** is a salesperson who works their own clients, keeps their own calendar and availability, and sees their own statistics.
+- **Member** is a salesperson who works their own clients, keeps their own calendar and availability, and sees their own statistics. A member never sees teammates' clients, only their own. A member in several teams has one availability and one booking link shared across all of them.
 
 | Permission | Admin | Team lead | Member |
 | --- | --- | --- | --- |
@@ -65,7 +65,7 @@ The first version has nine modules. I read "board to administrate" as two things
 ### 2. Admin panel: users and teams
 
 - Invite a user by email, choose their team and role, and adjust individual permissions.
-- Create any number of teams and name a lead for each. A team lead can lead only one team, and every member belongs to one team.
+- Create any number of teams and name a lead for each. A team lead can lead only one team, and a member can belong to several teams, with one primary team.
 - Admins belong to no team. They switch between teams or view all of them at once, and manage every team's clients, calendars and services.
 - Assign to each team the services it sells.
 - Deactivate users instead of deleting them, so their history stays intact.
@@ -106,8 +106,8 @@ The first version has nine modules. I read "board to administrate" as two things
 
 ### 8. Services catalog
 
-- Admins record every service the company sells: name, description, price or price range, currency, category and an active flag. A service can be any product or service.
-- Each team sells its own set of services. Admins assign every service to one or more teams, and a team sees only its own services.
+- Admins record every service the company sells: name, description, price or price range, currency (Bs or $us), category and an active flag. A service can be any product or service.
+- Each team sells its own set of services. Every service belongs to exactly one team; two teams that sell the same thing get two separate services. Users see only the active services of their own teams.
 - Optional links to sales material such as brochures or presentations.
 - Clients, bookings and won deals link to one or more services, which powers sales-by-service statistics.
 - Every member can read their team's services when answering a client's questions.
@@ -135,7 +135,7 @@ The app has 25 screens: two before sign-in, three public booking pages for clien
 - One language only, and text contrast must meet WCAG 2.1 AA.
 - Controls a user has no permission for are hidden, not just disabled.
 - The three booking pages are for clients outside the company: a simple layout with no sidebar, the company logo, large touch-friendly time slots, and the time zone shown next to every time.
-- Still needed from the owner: logo, brand colors, and whether dark mode is wanted.
+- There is no brand yet: the app ships with a neutral placeholder theme (primary #1976d2, Roboto, 4px radius) and no dark mode. A logo and brand colors can replace the tokens later without redesigning screens.
 
 ### Sitemap
 
@@ -169,7 +169,7 @@ Members and team leads see the first six sections, and the Admin section is for 
 | Service form | 1 | Admins | Service fields, the teams that sell it, and links to sales material | Save, assign teams, deactivate |
 | Users | 1 | Admins | User table with role, team and status; per-user permission switches | Invite, change role, toggle permissions, deactivate, reassign clients |
 | Teams | 1 | Admins | Teams with their lead, members and services; each lead appears on one team only | Create team, set lead, move members, assign services |
-| Settings | 1 | Admins | Pipeline stages, loss reasons, currency | Add, rename and reorder stages |
+| Settings | 1 | Admins | Pipeline stages, loss reasons, default currency, exchange rate, time zone and booking rules | Add, rename and reorder stages |
 | Profile | 1 | Everyone | Name, email, password | Edit, sign out |
 | Notifications | 5 | Everyone | New assignments, booked calls, overdue follow-ups, finished searches | Open, mark as read |
 
@@ -211,7 +211,7 @@ The app is a single-page Angular app that talks to Firebase directly, with Cloud
 | Scraper | Task queue functions inside Cloud Functions | Batched jobs with retries and rate limits, using plain HTTP and HTML parsing |
 | Files | Cloud Storage for Firebase | CSV imports and attachments |
 | Hosting | Firebase Hosting | Serves the app and the public booking page; server-side rendering is not needed |
-| Email | Firebase Trigger Email extension with SendGrid or Mailgun | Invites, booking confirmations, reminders and notifications |
+| Email | Bird email API, called from one Cloud Functions module | Invites, booking confirmations, reminders and notifications, with Spanish templates |
 | Search, v1 | Algolia or Typesense extension | Full-text search |
 | Calendar views | FullCalendar or angular-calendar | Day and week views of booked calls |
 
@@ -227,22 +227,23 @@ Because this is an internal tool for one company, every collection sits at the t
 
 | Path | Holds | Key fields |
 | --- | --- | --- |
-| `settings/app` | Company-wide settings | companyName, currency, timezone, pipelineStages[], lossReasons[] |
-| `users/{uid}` | One user profile | teamId (one team per user, empty for admins), displayName, email, role, permissions{}, status, lastLoginAt |
+| `settings/app` | Company-wide settings | companyName, currency (Bs or $us), exchangeRate (Bs per $us, default 6.96), timezone, pipelineStages[], lossReasons[], bookingRules{minNoticeHours, maxDaysAhead, bufferMinutes} |
+| `users/{uid}` | One user profile | teamIds[] and primaryTeamId (empty for admins), displayName, email, role, permissions{} (per-user switches from P5-06), status, lastLoginAt |
 | `teams/{teamId}` | A sales team | name, leadUid (a user leads at most one team), memberCount |
 | `invitations/{inviteId}` | Pending invites | email, role, teamId, invitedBy, expiresAt, status |
-| `clients/{clientId}` | A client or lead | companyName, contactName, email, phone, website, industry, city, country, stage, ownerUid, teamId, serviceIds[], estimatedValue, closedValue, lossReason, source (scraper, booking, manual or import), tags[], nextFollowUpAt, searchTokens[], createdAt, updatedAt, deletedAt |
+| `clients/{clientId}` | A client or lead | companyName, contactName, email, phone, website, instagram, industry, city, country, stage, ownerUid, teamId, serviceIds[], estimatedValue, closedValue, valueCurrency, lossReason, source (scraper, booking, manual or import), tags[], nextFollowUpAt, searchTokens[], createdAt, updatedAt, deletedAt |
 | `clients/{clientId}/activities/{activityId}` | Timeline entries | type, body, authorUid, fromStage, toStage, createdAt |
-| `services/{serviceId}` | A service the company sells | name, description, priceMin, priceMax, currency, category, active, teamIds[] (the teams that sell it), materialUrls[] |
-| `availability/{uid}` | A seller's booking settings | bookingSlug, timezone, weeklyHours{}, slotMinutes, bufferMinutes, minNoticeHours, maxDaysAhead, daysOff[], meetingUrl, paused |
+| `services/{serviceId}` | A service the company sells | name, description, priceMin, priceMax, currency, category, active, teamId (the one team that sells it), materialUrls[] |
+| `availability/{uid}` | A seller's booking settings, shared across all their teams | bookingSlug, timezone, weeklyHours{}, slotMinutes, daysOff[], meetingUrl, paused (buffer, minimum notice and booking window come from `settings/app`) |
 | `bookings/{bookingId}` | A scheduled call | sellerUid, teamId, clientId, serviceId, startAt, endAt, status (confirmed, completed, no-show or cancelled), guestName, guestEmail, guestPhone, message, manageTokenHash, createdAt, cancelledAt, outcomeNote |
+| `clientTypes/{typeId}` | A saved description of the kind of client to find | ownerUid, sharedTeamId, description, categories[], locations[], keywords[], excludeWords[], mustHaves[], sources[] |
 | `scrapeJobs/{jobId}` | One scraper run | createdBy, source, query{}, status, progress, resultCount, startedAt, finishedAt, error |
 | `scrapeJobs/{jobId}/leads/{leadId}` | Leads waiting for review | raw{}, normalized{}, duplicateOfClientId, reviewStatus, reviewedBy |
 | `stats/{scope_period}` | Pre-aggregated numbers | scope (company, team or user), period, countsByStage{}, pipelineValue, wonValue, wonCount, lostCount, activities, callsBooked, callsCompleted, noShows, byService{} |
 
 - **Indexes:** composite indexes for team + stage + last update, owner + next follow-up, stage + owner, and seller + start time for bookings.
 - **Search:** Firestore has no full-text search. The MVP matches lowercase word prefixes stored in searchTokens; v1 can add Algolia or Typesense through a Firebase Extension.
-- **Deals:** if one client can buy several services over time, stage and value move to a separate deals collection. This is an open question below.
+- **Deals:** in v1 one client has one deal, so stage and value live on the client. A client can in practice buy several services over time, so a separate deals collection is planned after v1, and the data model must not make that migration hard (keep stage and value fields together and do not build stats that assume a client can only ever win once).
 - **Free times:** a Cloud Function calculates a seller's free times from their weekly hours, days off and existing bookings. A booking is saved in one transaction that checks no other confirmed booking overlaps, so two clients can never take the same time.
 - **One lead per team:** only a Cloud Function can set a team's lead, and it rejects a user who already leads another team.
 
@@ -254,7 +255,7 @@ Every Firestore rule starts from deny, and the browser can never grant itself a 
 - **Fine-grained permissions.** Per-user switches live in the user's profile under permissions. Rules read them, and small flags can also be copied into the claims.
 - **Fast role changes.** After a role change the function writes a timestamp that the app listens to, and the app refreshes its token. The new role applies within seconds instead of up to an hour.
 - **Rules per path.** Every path checks that the user is signed in and active. Members edit only clients they own, team leads edit their team's clients, and no one but an admin can change a client's owner. Sellers read their own bookings, team leads their team's, and admins all of them.
-- **One team, one lead.** Only a Cloud Function can set a user's team or a team's lead, and it rejects a team lead who already leads another team.
+- **Teams and leads.** Only a Cloud Function can set a user's teams or a team's lead, and it rejects a team lead who already leads another team.
 - **Field validation.** Rules check types, required fields and allowed stages. Deletes from the app are soft: they set deletedAt.
 - **Privileged actions on the server.** Inviting, changing roles, deactivating users, starting the scraper, bulk import and permanent deletes run only through callable Cloud Functions. So do creating, moving and cancelling bookings.
 - **Public booking page.** It is the only part open to people outside the company. Visitors never touch Firestore. They call two Cloud Functions, one that lists free times and one that books a call, both protected by App Check and by rate limits per address and per email. The list of free times shows times only, never client or booking details. Reschedule and cancel links carry a random token that is stored hashed.
@@ -264,7 +265,7 @@ Every Firestore rule starts from deny, and the browser can never grant itself a 
 
 ## Lead scraper
 
-The scraper should start with official data APIs and public company websites, not social networks. That keeps it legal, stable and cheaper to maintain.
+The scraper should start with official data APIs and public company websites. Instagram is allowed only through its official Graph API, once Meta approves access. The first market is Bolivia, and each search chooses its own cities. Paid sources must fit a budget of about $10 per month at launch, so each seller has a daily quota and a billing budget alert is set from day one.
 
 **How a search runs**
 
@@ -283,8 +284,9 @@ The scraper should start with official data APIs and public company websites, no
 | --- | --- | --- |
 | Google Places API | Business name, address, phone, website, category, rating | Official and paid per request. Google's terms limit how long most Places data may be stored, so legal review must confirm what we keep. |
 | Company websites | Emails and phones from contact pages | Respect robots.txt and rate-limit each domain. |
-| Public business directories | Companies by industry and city | Check each site's terms before using it. |
-| Email enrichment APIs, such as Hunter or Apollo | Verified business emails | Paid, with clear usage terms. |
+| Instagram Graph API | Bio, website and follower count of business accounts, found by hashtag or handle | Official API only, disabled until Meta approves the app (review starts in Phase 0). |
+| OpenAI web search | Companies matching a client type described in plain words, each with a source link | Paid per search; only the client type is sent, never CRM data; leads without a source link are dropped. |
+| Public business directories, email enrichment APIs such as Hunter or Apollo | Companies by industry and city, verified emails | Not in v1. Revisit after the legal review and once the budget allows. |
 | LinkedIn | Not recommended | Its terms forbid scraping, and accounts get banned. |
 
 **Deduplication.** Emails are lowercased, phones are converted to international format, websites are reduced to their root domain, and company names lose legal suffixes. A match on any of these flags the lead as a possible duplicate.
@@ -323,14 +325,16 @@ These are proposed targets for the first version; adjust them once the expected 
 | --- | --- |
 | Devices | Responsive layout, designed for desktop first and usable on tablets and phones |
 | Performance | Lists load 25 rows per page; dashboards load in under 2 seconds on a normal connection |
-| Languages | One language only; no internationalization framework is needed |
+| Languages | Spanish only, with es-BO dates and numbers; no internationalization framework is needed |
+| Currency | Bolivianos (Bs) by default and US dollars ($us) as an option, at an exchange rate admins set in Settings (default 6.96 Bs per $us); each amount keeps its own currency |
+| Scale | About 5 users at launch and a single company; no capacity planning is needed beyond Firebase defaults |
 | Accessibility | WCAG 2.1 AA: full keyboard use, readable contrast, labelled fields |
 | Environments | One Firebase project, production only; developers work locally on the Firebase Emulator Suite, so tests never touch live data |
 | CI/CD | GitHub Actions runs lint, unit tests, rules tests and the build on every pull request, and deploys to production when it merges to main |
 | Testing | Unit tests for components and services, Emulator Suite tests for rules and functions, Playwright end-to-end tests for the key flows |
 | Backups | Not at launch; daily Firestore exports and point-in-time recovery come after launch |
 | Monitoring | Not at launch; the logs Firebase keeps by default are enough, and error tracking and alerts come after launch |
-| Cost | The Firebase Blaze plan is required for Cloud Functions and outbound requests; a budget alert is set from day one |
+| Cost | The Firebase Blaze plan is required for Cloud Functions and outbound requests; paid APIs have a budget of about $10 per month at launch, and a budget alert is set from day one |
 | Data protection | Google encrypts data in transit and at rest; client data can be exported or deleted on request |
 | Time zones | Each seller's availability is stored with their time zone; booking pages show times in the visitor's time zone, with the zone name next to every time |
 | Booking page | Free times load in under 2 seconds and the page works at phone width |
@@ -356,23 +360,26 @@ The brief is missing a few features that almost every CRM needs, and several dec
 - **Global search** across clients, contacts and services.
 - **Later:** backups, an audit log, monitoring and error alerts, Google and Outlook calendar sync, one team booking link that assigns whoever is free, Gmail and Outlook email integration, WhatsApp click-to-chat links, quotes generated from the services catalog, and a mobile app.
 
-### Decisions needed
+### Decisions
 
-- [ ] Does "board to administrate" mean the pipeline Kanban, the admin panel, or both?
-- [ ] Can members see teammates' clients, or only their own?
-- [ ] Is one client one deal, or can a client have several deals over time?
-- [ ] What are the final pipeline stages and loss reasons?
-- [ ] Which scraper sources, countries and cities come first?
-- [ ] What monthly budget is there for paid APIs such as Google Places?
-- [ ] Which language and currency does the app use?
-- [ ] Which sign-in methods: email and password, Google, or both?
-- [ ] How many users and clients are expected in the first year?
-- [ ] What is the target date for the MVP?
-- [ ] Is there branding ready: logo, colors, domain?
-- [ ] Should clients book a specific seller, or a team link that assigns whoever is free?
-- [ ] Which meeting tool do calls use: a link each seller pastes (Meet, Zoom or Teams), or phone calls?
-- [ ] Is syncing with each seller's Google or Outlook calendar needed at launch, to avoid bookings while they are busy elsewhere?
-- [ ] Does each service belong to one team, or can several teams sell the same service?
+All 16 decisions were settled in task P0-01. Items marked **Open** are not blocking.
+
+1. **"Board to administrate"** means both: the pipeline Kanban board and the admin panel.
+2. **Teammates' clients.** Members see only their own clients. Team leads see their team's clients and admins see all of them.
+3. **Deals.** One client has one deal in v1, with stage and value on the client. A client can buy several services over time, so a separate deals collection is planned after v1 (see the data model).
+4. **Pipeline stages and loss reasons.** Stages are New, Contacted, Qualified, Proposal, Negotiation, Won and Lost, shown in Spanish. Admins can rename, recolor, add and reorder them, and Won and Lost always stay last. Loss reasons are Price, Chose a competitor, No budget, No response, Not a fit, Bad timing and Other, and admins can edit the list.
+5. **Scraper sources and market.** Bolivia is the first market, and each search picks its cities. Sources are Google Places, the Instagram Graph API, OpenAI web search and company website enrichment. LinkedIn is excluded and directories and email enrichment are not in v1.
+6. **Budget for paid APIs.** About $10 per month at launch, controlled by per-seller daily quotas and a billing budget alert.
+7. **Language and currency.** Spanish only (es-BO). Bs by default with $us as an option, at an exchange rate admins set (default 6.96 Bs per $us).
+8. **Sign-in.** Email and password, plus Google limited to the company's email domain.
+9. **Size in the first year.** About 5 users, one company. **Open:** no client count estimate; Firebase defaults are enough at this size.
+10. **MVP date.** **Open:** no fixed date. The roadmap estimate stands: the MVP demo after about 5 weeks and clients booking calls after about 8 weeks, for one full-time developer.
+11. **Branding.** None yet. The app uses a neutral placeholder theme, with no dark mode and no custom domain for now.
+12. **Booking link.** Clients book a specific seller through a personal link. A team link that assigns whoever is free comes later.
+13. **Meeting tool.** Each seller pastes their own meeting link (Meet, Zoom or Teams), or chooses phone calls.
+14. **Calendar sync.** Not at launch. Sellers block busy times in the app, and Google and Outlook sync comes later.
+15. **Services and teams.** Each service belongs to exactly one team. Two teams that sell the same thing get two services.
+16. **MVP scope.** The phases stay as planned. The MVP is Phase 1 (invite, clients and board), calendar and booking are Phase 2, and the home dashboard is Phase 3. The sidebar shows Inicio and Calendario only once they ship. Per-user permission switches move to P5-06.
 
 ## Risks and mitigations
 
