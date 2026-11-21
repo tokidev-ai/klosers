@@ -1,11 +1,11 @@
 /**
  * Region for every Cloud Function.
  *
- * Choose it once, in P0-03.2, together with the Firestore location, which can never be
- * changed after the database is created. São Paulo (southamerica-east1) is the proposed
- * default for a Bolivian team; change this one constant if the team picks another region.
+ * It must match the Firestore location, because Firestore triggers run in the database's
+ * region. The production database in leadport-dev was created in nam5, a United States
+ * multi-region whose functions region is us-central1. A database location can never change.
  */
-export const REGION = "southamerica-east1";
+export const REGION = "us-central1";
 
 /** The local demo project. It only exists inside the Firebase emulators. */
 export const DEMO_PROJECT_ID = "demo-klosers";

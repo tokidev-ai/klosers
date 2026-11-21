@@ -28,7 +28,7 @@ npm run seed         # in a second terminal: loads sample data
 | Emulator UI | http://127.0.0.1:4000 |
 | Auth | 127.0.0.1:9099 |
 | Firestore | 127.0.0.1:8080 |
-| Functions | 127.0.0.1:5005, health check at `/demo-klosers/southamerica-east1/health` |
+| Functions | 127.0.0.1:5005, health check at `/demo-klosers/us-central1/health` |
 | Hosting | http://127.0.0.1:5002 (a placeholder page until the app exists) |
 | Storage | 127.0.0.1:9199 |
 
