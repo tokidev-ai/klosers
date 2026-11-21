@@ -27,3 +27,7 @@ ui-debug.log
 .DS_Store
 Thumbs.db
 npm-debug.log*
+
+# Firebase emulators: saved local data and every emulator log
+.emulator-data/
+*-debug.log

@@ -1,24 +1,26 @@
 # Klosers CRM
 
-A web app where a sales team keeps its clients in one place, finds leads, moves deals across a pipeline board, takes bookings and tracks results. Built with Angular and Firebase. The full plan is in [`docs/planning.md`](docs/planning.md).
+A web app where a sales team keeps its clients in one place, finds leads, moves deals across a pipeline board, takes bookings and tracks results. Built with Angular and Firebase. The full plan is in [`docs/planning.md`](docs/planning.md), and the one-time production setup is in [`docs/firebase-setup.md`](docs/firebase-setup.md).
 
 ## Repository layout
 
-| Folder                                                               | What it holds                                                                   |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| [`apps/web`](apps/web)                                               | The Angular app (standalone components, signals)                                |
-| [`functions`](functions)                                             | Cloud Functions for Firebase, 2nd gen, TypeScript                               |
-| [`firestore`](firestore)                                             | `firestore.rules` and `firestore.indexes.json`                                  |
-| [`shared`](shared)                                                   | Data-model TypeScript types used by both the app and the functions              |
-| `firebase.json`, `eslint.config.mjs`, `.prettierrc`, `.editorconfig` | Firebase config and the lint and format settings shared by the whole repository |
+| Folder                                                                              | What it holds                                                                                                                                      |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`apps/web`](apps/web)                                                              | The Angular app (standalone components, signals)                                                                                                   |
+| [`functions`](functions)                                                            | Cloud Functions for Firebase, 2nd gen, TypeScript. The region lives in `functions/src/config.ts` and the API secrets in `functions/src/secrets.ts` |
+| [`firestore`](firestore)                                                            | `firestore.rules` and `firestore.indexes.json`                                                                                                     |
+| [`storage`](storage)                                                                | `storage.rules`                                                                                                                                    |
+| [`shared`](shared)                                                                  | Data-model TypeScript types used by the app, the functions and the seed script                                                                     |
+| [`scripts`](scripts)                                                                | Emulator launcher, seed, seed check and health check                                                                                               |
+| `firebase.json`, `.firebaserc`, `eslint.config.mjs`, `.prettierrc`, `.editorconfig` | Firebase config and the lint and format settings shared by the whole repository                                                                    |
 
 It is an npm workspace: `apps/web` and `functions` are workspaces, and one `npm install` at the root installs both.
 
 ## Prerequisites
 
 - **Node.js 22.22.3 or newer** (see `.nvmrc`; the Angular CLI refuses older versions). Cloud Functions run on Node 22.
-- **JDK 21 or newer**, only for the Firestore emulator.
-- A **Firebase project on the Blaze plan** (Cloud Functions need it), only when you deploy. Local work needs no project.
+- **JDK 21 or newer**, only for the Firestore emulator. On macOS: `brew install openjdk@21`, then `export JAVA_HOME="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"`.
+- Access to the Firebase project, only when you deploy. Local work needs no project and no login.
 
 ## Install
 
@@ -31,18 +33,46 @@ The Firebase CLI is installed with the repository (`firebase-tools`), so there i
 
 ## Run locally
 
-Developers work against the Firebase Emulator Suite, never against live data.
+Developers work against the Firebase Emulator Suite and the `demo-klosers` project, which exists only inside the emulators, so local work never touches live data.
 
 ```sh
-npm run emulators   # Auth, Firestore, Functions and Hosting emulators, UI at http://localhost:4000
+npm run emulators   # builds the functions and starts every emulator
+npm run seed        # in a second terminal: loads the sample data
 npm start           # Angular dev server at http://localhost:4200
 ```
 
-Build first (`npm run build`) if you want the Hosting emulator to serve the app, because it serves `apps/web/dist/web/browser`. The Functions emulator runs the built code in `functions/lib`, so rebuild after changing a function (`npm run build --workspace functions`).
+| Service     | Address                                                                          |
+| ----------- | -------------------------------------------------------------------------------- |
+| Emulator UI | http://127.0.0.1:4000                                                            |
+| Auth        | 127.0.0.1:9099                                                                   |
+| Firestore   | 127.0.0.1:8080                                                                   |
+| Functions   | 127.0.0.1:5005, smoke test `ping` at `/demo-klosers/us-central1/ping`            |
+| Hosting     | http://127.0.0.1:5002, serving `apps/web/dist/web/browser` after `npm run build` |
+| Storage     | 127.0.0.1:9199                                                                   |
+
+The Functions emulator uses port 5005 and Hosting 5002 instead of the usual 5001 and 5000, which Cisco AnyConnect and the macOS AirPlay receiver often hold. The Functions emulator runs the built code in `functions/lib`, so rebuild after changing a function (`npm run build --workspace functions`).
+
+Data is saved to `.emulator-data/` when you stop the emulators with Ctrl+C, and loaded on the next start. `npm run emulators:fresh` starts empty. Seeding again is safe: it resets the sample records without duplicating them. If you created an account in the Auth emulator with one of the sample emails, the seed replaces it.
+
+To give the Functions emulator secret values, copy `functions/.secret.local.example` to `functions/.secret.local`. Git ignores that file.
+
+## Sample accounts
+
+Every seeded account signs in with the password `klosers-local-123`, in the emulators only.
+
+| Role                          | Email                       | Teams                                |
+| ----------------------------- | --------------------------- | ------------------------------------ |
+| Administrador (`admin`)       | admin@klosers.test          | None                                 |
+| Líder de equipo (`team_lead`) | camila.flores@klosers.test  | Corporativo                          |
+| Líder de equipo (`team_lead`) | valentina.cruz@klosers.test | Pymes                                |
+| Vendedor (`member`)           | sofia.rojas@klosers.test    | Corporativo                          |
+| Vendedor (`member`)           | mariana.vaca@klosers.test   | Corporativo and Pymes, primary Pymes |
+
+The seed also creates the company settings (Bs by default, 6.96 Bs per $us, the seven pipeline stages and loss reasons), five services that each belong to one team, eight clients across the stages, and booking availability for three sellers. The data in `scripts/lib/seed-data.mjs` is type-checked against `shared/src`.
 
 ## Lint, format and checks
 
-One command covers the whole repository (app, functions, shared types and config files):
+One command covers the whole repository (app, functions, shared types, scripts and config files):
 
 ```sh
 npm run check    # ESLint + Prettier check + type check; run this before pushing
@@ -54,9 +84,12 @@ The pieces are also available on their own: `npm run lint`, `npm run format`, `n
 ## Build and test
 
 ```sh
-npm run build    # Angular production build and Cloud Functions bundle
-npm test         # Angular unit tests
+npm run build            # Angular production build and Cloud Functions bundle
+npm test                 # Angular unit tests
+npm run test:emulators   # seed twice, check the data and sign-in, call ping
 ```
+
+`npm run test:emulators` starts the emulators, seeds twice, checks the data against the data model in strict mode (exact totals, so no duplicates), checks that every account signs in with its role, and calls the `ping` function. `npm run seed:verify` runs the same checks against emulators you are already using; it checks only the seeded records, so your own test data is fine. The seed and check scripts refuse to run against anything but local emulators and a `demo-` project.
 
 ## Shared types
 
@@ -66,24 +99,23 @@ The data model from the planning document lives in [`shared/src`](shared/src) as
 import type { Client, Role } from '@klosers/shared';
 ```
 
-The `@klosers/shared` alias is set in `apps/web/tsconfig.json` and `functions/tsconfig.json`. Functions are bundled with esbuild before deploy, and `import type` is erased, so the functions package needs no extra dependency on `shared`. ESLint enforces `import type` in `functions` and `shared`.
+The `@klosers/shared` alias is set in `apps/web/tsconfig.json`, `functions/tsconfig.json` and `scripts/tsconfig.json`. Functions are bundled with esbuild before deploy, and `import type` is erased, so the functions package needs no extra dependency on `shared`. ESLint enforces `import type` in `functions` and `shared`.
 
 ## Deploy
 
-Deploys go to the single production Firebase project. The plan is to deploy from CI when a change merges to `main`; until that exists, deploy by hand:
+Deploys go to the single Firebase project, `leadport-dev`, named `prod` in `.firebaserc`. The default project stays `demo-klosers`, so a command without `--project prod` can never reach it. The plan is to deploy from CI when a change merges to `main`; until that exists, deploy by hand:
 
 ```sh
 npx firebase login
-npx firebase use --add        # pick the project once; this creates .firebaserc
-npm run deploy                # Hosting, Functions, and Firestore rules and indexes
+npm run deploy                # Hosting, Functions, Firestore and Storage rules and indexes
 ```
 
-The predeploy hooks in `firebase.json` build the app and the functions first. To deploy one part only:
+The predeploy hooks in `firebase.json` build the app and the functions first. Until the Storage bucket exists (see [`docs/firebase-setup.md`](docs/firebase-setup.md)), deploy the other parts only:
 
 ```sh
-npx firebase deploy --only hosting
-npx firebase deploy --only functions
-npx firebase deploy --only firestore
+npx firebase deploy --project prod --only hosting
+npx firebase deploy --project prod --only functions
+npx firebase deploy --project prod --only firestore
 ```
 
 Rules and indexes in `firestore/` are deployed with the `firestore` target. The rules start from deny-all, so the app cannot read or write data until the rules for each collection are added.
