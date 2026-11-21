@@ -1,0 +1,43 @@
+name: Deploy
+
+# Deploys to production when a change merges to main. Production deploys come only from here.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One deploy at a time, and never cancel one that has started.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to production
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # lets the job ask Google for a short-lived token; no key is stored
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      # The predeploy hooks in firebase.json build the app and the functions first.
+      # Storage is left out until its bucket exists (docs/firebase-setup.md).
+      - name: Deploy Hosting, Functions, Firestore rules and indexes
+        run: npx firebase deploy --project prod --only hosting,functions,firestore --non-interactive
