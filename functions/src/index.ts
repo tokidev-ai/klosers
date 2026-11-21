@@ -1,10 +1,15 @@
-import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
-import { REGION } from "./config";
+import { initializeApp } from 'firebase-admin/app';
+import { setGlobalOptions } from 'firebase-functions/v2';
+import { onCall } from 'firebase-functions/v2/https';
+import type { Role } from '@klosers/shared';
+import { REGION } from './config';
 
+initializeApp();
+
+// One region for every function; cap instances to keep the bill predictable.
 setGlobalOptions({ region: REGION, maxInstances: 10 });
 
-/** Health check used by the emulator test and, later, by uptime checks. */
-export const health = onRequest((_request, response) => {
-  response.json({ status: "ok", service: "klosers-functions", region: REGION });
-});
+const ROLES: readonly Role[] = ['admin', 'team_lead', 'member'];
+
+/** Smoke test for the local emulator and for the first deploy. */
+export const ping = onCall(() => ({ ok: true, roles: ROLES }));

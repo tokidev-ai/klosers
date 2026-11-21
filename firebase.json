@@ -1,33 +1,74 @@
 {
   "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+    "rules": "firestore/firestore.rules",
+    "indexes": "firestore/firestore.indexes.json"
   },
   "functions": [
     {
       "source": "functions",
       "codebase": "default",
-      "ignore": ["node_modules", ".git", "*.local", "*.log", "src", "tsconfig.json"],
+      "runtime": "nodejs22",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "src",
+        "tsconfig.json",
+        "*.local",
+        "*.log"
+      ],
       "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
     }
   ],
   "hosting": {
-    "public": "web/placeholder",
+    "public": "apps/web/dist/web/browser",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
-  },
-  "storage": {
-    "rules": "storage.rules"
+    "predeploy": ["npm run build --workspace apps/web"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
   },
   "emulators": {
     "singleProjectMode": true,
-    "auth": { "host": "127.0.0.1", "port": 9099 },
-    "firestore": { "host": "127.0.0.1", "port": 8080 },
-    "functions": { "host": "127.0.0.1", "port": 5005 },
-    "hosting": { "host": "127.0.0.1", "port": 5002 },
-    "storage": { "host": "127.0.0.1", "port": 9199 },
-    "ui": { "enabled": true, "host": "127.0.0.1", "port": 4000 },
-    "hub": { "host": "127.0.0.1", "port": 4400 },
-    "logging": { "host": "127.0.0.1", "port": 4500 }
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9099
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "functions": {
+      "host": "127.0.0.1",
+      "port": 5005
+    },
+    "hosting": {
+      "host": "127.0.0.1",
+      "port": 5002
+    },
+    "storage": {
+      "host": "127.0.0.1",
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 4000
+    },
+    "hub": {
+      "host": "127.0.0.1",
+      "port": 4400
+    },
+    "logging": {
+      "host": "127.0.0.1",
+      "port": 4500
+    }
+  },
+  "storage": {
+    "rules": "storage/storage.rules"
   }
 }

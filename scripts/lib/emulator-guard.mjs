@@ -12,6 +12,7 @@ export function emulatorConfig() {
   return JSON.parse(readFileSync(path.join(ROOT, "firebase.json"), "utf8")).emulators;
 }
 
+/** @param {string} [hostAndPort] */
 function hostOf(hostAndPort = "") {
   if (hostAndPort.startsWith("[")) return hostAndPort.slice(1, hostAndPort.indexOf("]"));
   const parts = hostAndPort.split(":");
@@ -45,10 +46,22 @@ export function useEmulators() {
   };
 }
 
+/**
+ * @param {string} url
+ * @param {string} label
+ */
 export async function assertReachable(url, label) {
   try {
     await fetch(url, { signal: AbortSignal.timeout(3000) });
   } catch {
     throw new Error(`Cannot reach the ${label} emulator at ${url}. Start the emulators first: npm run emulators`);
   }
+}
+
+/**
+ * The `code` of a Firebase Admin error, or undefined.
+ * @param {unknown} error
+ */
+export function errorCode(error) {
+  return typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
 }

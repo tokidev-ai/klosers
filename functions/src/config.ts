@@ -5,7 +5,4 @@
  * region. The production database in leadport-dev was created in nam5, a United States
  * multi-region whose functions region is us-central1. A database location can never change.
  */
-export const REGION = "us-central1";
-
-/** The local demo project. It only exists inside the Firebase emulators. */
-export const DEMO_PROJECT_ID = "demo-klosers";
+export const REGION = 'us-central1';

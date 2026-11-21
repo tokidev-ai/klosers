@@ -2,18 +2,32 @@
 node_modules/
 
 # Build output
-functions/lib/
-web/dist/
+dist/
+lib/
+out-tsc/
+.angular/
+coverage/
 
 # Firebase
 .firebase/
-*-debug.log
-.emulator-data/
-functions/.secret.local
-functions/.runtimeconfig.json
-functions/.env.local
+firebase-debug.log*
+firestore-debug.log
+ui-debug.log
+*.local
 
-# OS and editors
-.DS_Store
-.vscode/
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editors and OS
 .idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+npm-debug.log*
+
+# Firebase emulators: saved local data and every emulator log
+.emulator-data/
+*-debug.log

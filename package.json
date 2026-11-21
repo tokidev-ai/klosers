@@ -1,21 +1,42 @@
 {
   "name": "klosers",
+  "version": "0.0.0",
   "private": true,
-  "description": "Klosers CRM: internal sales CRM on Angular, Tailwind and Firebase",
+  "description": "Klosers CRM: Angular app, Cloud Functions and Firestore rules in one repository",
+  "workspaces": [
+    "apps/*",
+    "functions"
+  ],
   "engines": {
-    "node": ">=22"
+    "node": ">=22.22.3"
   },
   "scripts": {
-    "postinstall": "npm --prefix functions ci --no-audit --no-fund",
-    "build:functions": "npm --prefix functions run build",
+    "start": "npm run start --workspace apps/web",
     "emulators": "node scripts/emulators.mjs",
     "emulators:fresh": "node scripts/emulators.mjs --fresh",
     "seed": "node scripts/seed.mjs",
     "seed:verify": "node scripts/verify-seed.mjs",
-    "test:emulators": "npm run build:functions && firebase emulators:exec --project demo-klosers \"node scripts/seed.mjs && node scripts/seed.mjs && node scripts/verify-seed.mjs --strict && node scripts/check-health.mjs\""
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:emulators": "npm run build --workspace functions && firebase emulators:exec --project demo-klosers \"node scripts/seed.mjs && node scripts/seed.mjs && node scripts/verify-seed.mjs --strict && node scripts/check-health.mjs\"",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p shared && tsc -p scripts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check && npm run typecheck",
+    "fix": "eslint . --fix && prettier --write .",
+    "deploy": "firebase deploy --project prod"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "angular-eslint": "^22.8.0",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
     "firebase-admin": "^14.5.1",
-    "firebase-tools": "^15.37.0"
+    "firebase-tools": "^15.37.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.73.0"
   }
 }
