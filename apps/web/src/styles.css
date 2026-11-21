@@ -1,1 +1,64 @@
-/* You can add global styles to this file, and also import other style files */
+@import '@fontsource/roboto/latin-400.css';
+@import '@fontsource/roboto/latin-500.css';
+@import '@fontsource/roboto/latin-700.css';
+@import '@angular/cdk/overlay-prebuilt.css';
+@import 'tailwindcss';
+
+/*
+ * Design tokens from the "Tokens de diseño" board (Material UI defaults, copied to Tailwind).
+ * A logo and brand colors replace `primary` later without touching any screen.
+ */
+@theme {
+  --font-sans: Roboto, Helvetica, Arial, sans-serif;
+
+  /* Spacing steps are 8px: p-1 is 8px, p-2 is 16px, p-3 is 24px. Use p-0.5 for 4px. */
+  --spacing: 8px;
+
+  --color-primary: #1976d2;
+  --color-primary-light: #42a5f5;
+  --color-primary-dark: #1565c0;
+  --color-success: #2e7d32;
+  --color-warning: #ed6c02;
+  --color-error: #d32f2f;
+  --color-info: #0288d1;
+
+  --color-canvas: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-field: #f1f3f6;
+  --color-divider: rgb(0 0 0 / 0.12);
+  --color-ink: #212121;
+  --color-ink-soft: #666666;
+  --color-code: #263238;
+
+  /* 4px on cards, fields and buttons; 16px on chips. */
+  --radius-xs: 4px;
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-chip: 16px;
+
+  --shadow-menu:
+    0 5px 5px -3px rgb(0 0 0 / 0.2), 0 8px 10px 1px rgb(0 0 0 / 0.14),
+    0 3px 14px 2px rgb(0 0 0 / 0.12);
+  --shadow-drawer:
+    0 8px 10px -5px rgb(0 0 0 / 0.2), 0 16px 24px 2px rgb(0 0 0 / 0.14),
+    0 6px 30px 5px rgb(0 0 0 / 0.12);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background-color: var(--color-canvas);
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}

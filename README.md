@@ -57,6 +57,15 @@ Data is saved to `.emulator-data/` when you stop the emulators with Ctrl+C, and 
 
 To give the Functions emulator secret values, copy `functions/.secret.local.example` to `functions/.secret.local`. Git ignores that file.
 
+## The web app
+
+`apps/web` is Angular with standalone components and signals, Tailwind CSS v4 and AngularFire.
+
+- **Theme.** The design tokens (Roboto, primary `#1976d2`, 4px radius, 16px chips, 8px spacing steps) live in the `@theme` block of `apps/web/src/styles.css`. Because the spacing step is 8px, `p-1` is 8px and `p-2` is 16px; use `p-0.5` for 4px.
+- **Shell.** `src/app/layout` holds the sidebar (240px, collapsible to a 64px rail, a drawer on phones), the 64px top bar and the shell that wraps every signed-in screen. Each sidebar section is a lazy-loaded route in `src/app/app.routes.ts`.
+- **Firebase.** `src/app/app.config.ts` connects Auth, Firestore, Functions and Storage. `npm start` uses `src/environments/environment.development.ts`, which points every service at the local emulators; the production build uses `environment.ts`, the public web settings of `leadport-dev`.
+- **Language.** Spanish only, with the `es-BO` locale for dates and numbers.
+
 ## Sample accounts
 
 Every seeded account signs in with the password `klosers-local-123`, in the emulators only.
