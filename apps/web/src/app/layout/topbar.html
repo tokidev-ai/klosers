@@ -1,0 +1,180 @@
+<button
+  type="button"
+  class="flex size-[44px] items-center justify-center rounded-full text-black/54 hover:bg-black/4"
+  [attr.aria-label]="layout.menuOpen() ? 'Cerrar el menú lateral' : 'Abrir el menú lateral'"
+  [attr.aria-expanded]="layout.menuOpen()"
+  aria-controls="menu-lateral"
+  (click)="layout.toggleMenu()"
+>
+  <app-icon name="menu" />
+</button>
+
+@if (session.canSwitchTeam()) {
+  <button
+    type="button"
+    class="flex h-5 max-w-36 items-center gap-1 rounded-md border border-black/23 bg-surface pr-1.5 pl-2 text-sm hover:bg-black/4 sm:max-w-none"
+    aria-label="Cambiar de equipo"
+    [cdkMenuTriggerFor]="teamMenu"
+  >
+    <span class="hidden text-ink-soft sm:inline">Equipo:</span>
+    <span class="truncate">{{ session.activeTeamName() || 'Elegir equipo' }}</span>
+    <app-icon name="dropdown" class="text-black/54" />
+  </button>
+} @else if (session.activeTeamName()) {
+  <span
+    class="inline-flex h-4 max-w-36 items-center rounded-chip bg-black/8 px-1.5 text-[13px] sm:max-w-none"
+  >
+    <span class="truncate">Equipo {{ session.activeTeamName() }}</span>
+  </span>
+}
+
+<div
+  class="hidden h-5 max-w-[380px] min-w-0 flex-1 items-center gap-1 rounded-md bg-field px-1.5 sm:flex"
+  title="La búsqueda estará disponible pronto"
+>
+  <app-icon name="search" [size]="20" class="text-black/54" />
+  <label for="busqueda-global" class="sr-only">Buscar clientes y servicios</label>
+  <input
+    id="busqueda-global"
+    type="search"
+    disabled
+    placeholder="Buscar clientes y servicios"
+    class="min-w-0 flex-1 border-0 bg-transparent text-[15px] outline-none placeholder:text-ink-soft"
+  />
+</div>
+
+<div class="flex-1"></div>
+
+<div
+  role="group"
+  aria-label="Moneda"
+  class="flex overflow-hidden rounded-md border border-black/23"
+>
+  @for (option of currencies.options; track option.value) {
+    <button
+      type="button"
+      class="h-5 min-w-[44px] px-1 text-sm font-medium sm:min-w-[52px]"
+      [class]="
+        currencies.currency() === option.value
+          ? 'bg-primary text-white'
+          : 'bg-surface text-ink-soft hover:bg-black/4'
+      "
+      [attr.aria-pressed]="currencies.currency() === option.value"
+      [attr.title]="option.name"
+      (click)="currencies.select(option.value)"
+    >
+      {{ option.label }}
+    </button>
+  }
+</div>
+
+<button
+  type="button"
+  class="flex size-[44px] items-center justify-center rounded-full text-black/54 hover:bg-black/4"
+  aria-label="Notificaciones"
+  [cdkMenuTriggerFor]="notificationsMenu"
+  [cdkMenuPosition]="endPosition"
+>
+  <app-icon name="notifications" />
+</button>
+
+<button
+  type="button"
+  class="flex size-[44px] items-center justify-center rounded-full hover:bg-black/4"
+  aria-label="Menú de cuenta"
+  [cdkMenuTriggerFor]="accountMenu"
+  [cdkMenuPosition]="endPosition"
+>
+  <span
+    class="flex size-[36px] items-center justify-center rounded-full bg-primary text-sm font-medium text-white"
+    aria-hidden="true"
+  >
+    {{ session.initials() }}
+  </span>
+</button>
+
+<ng-template #teamMenu>
+  <div
+    cdkMenu
+    cdkMenuGroup
+    class="flex min-w-[200px] flex-col rounded-md bg-surface py-1 shadow-menu"
+    aria-label="Equipo"
+  >
+    @if (session.isAdmin()) {
+      <button
+        type="button"
+        cdkMenuItemRadio
+        class="flex min-h-[44px] w-full items-center gap-2 px-2 text-left text-sm hover:bg-black/4 focus-visible:bg-black/4 disabled:text-ink-soft"
+        [cdkMenuItemChecked]="session.activeTeamId() === null"
+        (cdkMenuItemTriggered)="session.selectTeam(null)"
+      >
+        <span class="w-3 text-primary">
+          @if (session.activeTeamId() === null) {
+            <app-icon name="check" [size]="20" />
+          }
+        </span>
+        Todos los equipos
+      </button>
+    }
+    @for (team of session.teams(); track team.id) {
+      <button
+        type="button"
+        cdkMenuItemRadio
+        class="flex min-h-[44px] w-full items-center gap-2 px-2 text-left text-sm hover:bg-black/4 focus-visible:bg-black/4 disabled:text-ink-soft"
+        [cdkMenuItemChecked]="session.activeTeamId() === team.id"
+        (cdkMenuItemTriggered)="session.selectTeam(team.id)"
+      >
+        <span class="w-3 text-primary">
+          @if (session.activeTeamId() === team.id) {
+            <app-icon name="check" [size]="20" />
+          }
+        </span>
+        {{ team.name }}
+      </button>
+    }
+  </div>
+</ng-template>
+
+<ng-template #notificationsMenu>
+  <div
+    cdkMenu
+    class="flex min-w-[200px] flex-col rounded-md bg-surface py-1 shadow-menu"
+    aria-label="Notificaciones"
+  >
+    <button
+      type="button"
+      cdkMenuItem
+      disabled
+      class="flex min-h-[44px] w-full items-center gap-2 px-2 text-left text-sm hover:bg-black/4 focus-visible:bg-black/4 disabled:text-ink-soft"
+    >
+      No tienes notificaciones
+    </button>
+  </div>
+</ng-template>
+
+<ng-template #accountMenu>
+  <div
+    cdkMenu
+    class="flex min-w-[200px] flex-col rounded-md bg-surface py-1 shadow-menu"
+    aria-label="Cuenta"
+  >
+    <div role="presentation" class="flex flex-col border-b border-divider px-2 pb-1">
+      <span class="truncate font-medium">{{ session.displayName() }}</span>
+      @if (session.email()) {
+        <span class="truncate text-[13px] text-ink-soft">{{ session.email() }}</span>
+      }
+      @if (roleLabel(); as role) {
+        <span class="text-[13px] text-ink-soft">{{ role }}</span>
+      }
+    </div>
+    <button
+      type="button"
+      cdkMenuItem
+      class="flex min-h-[44px] w-full items-center gap-2 px-2 text-left text-sm hover:bg-black/4 focus-visible:bg-black/4 disabled:text-ink-soft"
+      (cdkMenuItemTriggered)="session.signOut()"
+    >
+      <app-icon name="logout" class="text-black/54" />
+      Cerrar sesión
+    </button>
+  </div>
+</ng-template>
