@@ -11,6 +11,7 @@ A web app where a sales team keeps its clients in one place, finds leads, moves 
 | [`firestore`](firestore)                                                            | `firestore.rules` and `firestore.indexes.json`                                                                                                     |
 | [`storage`](storage)                                                                | `storage.rules`                                                                                                                                    |
 | [`shared`](shared)                                                                  | Data-model TypeScript types used by the app, the functions and the seed script                                                                     |
+| [`.github/workflows`](.github/workflows)                                            | CI: `ci.yml` checks every pull request, `deploy.yml` deploys to production on merge to `main`                                                      |
 | [`scripts`](scripts)                                                                | Emulator launcher, seed, seed check and health check                                                                                               |
 | `firebase.json`, `.firebaserc`, `eslint.config.mjs`, `.prettierrc`, `.editorconfig` | Firebase config and the lint and format settings shared by the whole repository                                                                    |
 
@@ -101,21 +102,38 @@ import type { Client, Role } from '@klosers/shared';
 
 The `@klosers/shared` alias is set in `apps/web/tsconfig.json`, `functions/tsconfig.json` and `scripts/tsconfig.json`. Functions are bundled with esbuild before deploy, and `import type` is erased, so the functions package needs no extra dependency on `shared`. ESLint enforces `import type` in `functions` and `shared`.
 
+## Tests and checks
+
+| Command                  | What it does                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| `npm run check`          | Lint, format check and typecheck                                                            |
+| `npm test`               | Unit tests (Vitest)                                                                         |
+| `npm run test:rules`     | Firestore rules tests (`firestore/tests`) against the Firestore emulator, which needs a JDK |
+| `npm run test:emulators` | Starts every emulator, seeds twice, verifies the seed and calls the `ping` function         |
+| `npm run build`          | Builds the app and the functions                                                            |
+
+## CI/CD
+
+GitHub Actions runs two workflows:
+
+- **CI** (`.github/workflows/ci.yml`) runs on every pull request. The **Check** job runs lint, format check, typecheck, unit tests and the build. The **Emulator tests** job runs the rules tests and the emulator smoke test.
+- **Deploy** (`.github/workflows/deploy.yml`) runs when a change merges to `main`. It repeats CI on the merged code, then deploys Hosting, Functions and the Firestore rules and indexes to `leadport-dev`.
+
+Branch protection on `main` requires both CI jobs to pass before a merge. The deploy signs in with Workload Identity Federation and two GitHub secrets, `GCP_SERVICE_ACCOUNT` and `GCP_WORKLOAD_IDENTITY_PROVIDER`; no key is stored anywhere. The one-time setup is in [`docs/firebase-setup.md`](docs/firebase-setup.md).
+
 ## Deploy
 
-Deploys go to the single Firebase project, `leadport-dev`, named `prod` in `.firebaserc`. The default project stays `demo-klosers`, so a command without `--project prod` can never reach it. The plan is to deploy from CI when a change merges to `main`; until that exists, deploy by hand:
+Production deploys come from CI. Deploys go to the single Firebase project, `leadport-dev`, named `prod` in `.firebaserc`. The default project stays `demo-klosers`, so a command without `--project prod` can never reach it. If CI is down, an owner can deploy by hand:
 
 ```sh
 npx firebase login
 npm run deploy                # Hosting, Functions, Firestore and Storage rules and indexes
 ```
 
-The predeploy hooks in `firebase.json` build the app and the functions first. Until the Storage bucket exists (see [`docs/firebase-setup.md`](docs/firebase-setup.md)), deploy the other parts only:
+The predeploy hooks in `firebase.json` build the app and the functions first. CI leaves Storage out until the bucket exists (see [`docs/firebase-setup.md`](docs/firebase-setup.md)), so deploy the same way by hand:
 
 ```sh
-npx firebase deploy --project prod --only hosting
-npx firebase deploy --project prod --only functions
-npx firebase deploy --project prod --only firestore
+npx firebase deploy --project prod --only hosting,functions,firestore
 ```
 
-Rules and indexes in `firestore/` are deployed with the `firestore` target. The rules start from deny-all, so the app cannot read or write data until the rules for each collection are added.
+Rules and indexes in `firestore/` are deployed with the `firestore` target. The rules start from deny-all, so the app cannot read or write data until the rules for each collection are added. Add the rules tests for each collection to `firestore/tests/rules.test.mjs` in the same change.
