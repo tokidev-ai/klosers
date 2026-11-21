@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "demo-klosers",
+    "prod": "REPLACE-WITH-PRODUCTION-PROJECT-ID"
+  }
+}

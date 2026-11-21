@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+functions/lib/
+web/dist/
+
+# Firebase
+.firebase/
+*-debug.log
+.emulator-data/
+functions/.secret.local
+functions/.runtimeconfig.json
+functions/.env.local
+
+# OS and editors
+.DS_Store
+.vscode/
+.idea/

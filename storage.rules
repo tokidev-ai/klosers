@@ -1,0 +1,10 @@
+rules_version = '2';
+
+// Baseline: deny every read and write from apps until a task needs files (P3-06, CSV import).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
