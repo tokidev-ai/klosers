@@ -1,6 +1,6 @@
 # Klosers CRM
 
-A web app where a sales team keeps its clients in one place, finds leads, moves deals across a pipeline board, takes bookings and tracks results. Built with Angular and Firebase. The full plan is in [`docs/planning.md`](docs/planning.md), and the one-time production setup is in [`docs/firebase-setup.md`](docs/firebase-setup.md).
+A web app where a sales team keeps its clients in one place, finds leads, moves deals across a pipeline board, takes bookings and tracks results. Built with Angular and Firebase. The full plan is in [`docs/planning.md`](docs/planning.md), the design status is in [`docs/design.md`](docs/design.md), and the one-time production setup is in [`docs/firebase-setup.md`](docs/firebase-setup.md).
 
 ## Repository layout
 
