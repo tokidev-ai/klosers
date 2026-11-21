@@ -1,4 +1,6 @@
 // Checks the seeded emulator data against the rules in docs/planning.md.
+// By default it checks only the seeded records, so extra development data is fine.
+// --strict also requires exact totals, which proves seeding twice creates no duplicates.
 // Exits with code 1 and lists every problem it finds.
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
@@ -6,6 +8,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { assertReachable, useEmulators } from "./lib/emulator-guard.mjs";
 import { SEED_PASSWORD, availability, clients, services, teams, users } from "./lib/seed-data.mjs";
 
+const strict = process.argv.includes("--strict");
 const problems = [];
 const check = (ok, message) => { if (!ok) problems.push(message); };
 
@@ -28,20 +31,32 @@ async function main() {
   const app = initializeApp({ projectId: env.projectId });
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const all = async (name) => Object.fromEntries((await db.collection(name).get()).docs.map((d) => [d.id, d.data()]));
+
+  /** Reads the seeded documents of one collection by ID; a missing one is a problem. */
+  const seeded = async (collection, ids) => {
+    const snaps = await db.getAll(...ids.map((id) => db.doc(`${collection}/${id}`)));
+    const docs = {};
+    for (const snap of snaps) {
+      check(snap.exists, `${collection}/${snap.id} is missing`);
+      if (snap.exists) docs[snap.id] = snap.data();
+    }
+    return docs;
+  };
 
   // Accounts: each one signs in with the known password and carries its role.
   for (const u of users) {
     const claims = await signIn(env.authHost, u.email);
     check(claims, `${u.email} cannot sign in with the seed password`);
     check(claims?.role === u.role, `${u.email} has role claim "${claims?.role}", expected "${u.role}"`);
+    check(claims?.user_id === u.uid, `${u.email} belongs to uid "${claims?.user_id}", expected "${u.uid}"`);
   }
-  const authUsers = (await auth.listUsers(1000)).users;
-  check(authUsers.length === users.length, `expected ${users.length} auth users, found ${authUsers.length}`);
 
-  const [settingsSnap, teamDocs, userDocs, serviceDocs, clientDocs, availabilityDocs] = await Promise.all([
-    db.doc("settings/app").get(), all("teams"), all("users"), all("services"), all("clients"), all("availability"),
-  ]);
+  const settingsSnap = await db.doc("settings/app").get();
+  const teamDocs = await seeded("teams", teams.map((t) => t.id));
+  const userDocs = await seeded("users", users.map((u) => u.uid));
+  const serviceDocs = await seeded("services", services.map((s) => s.id));
+  const clientDocs = await seeded("clients", clients.map((c) => c.id));
+  const availabilityDocs = await seeded("availability", availability.map((a) => a.uid));
 
   // Settings.
   const settings = settingsSnap.data();
@@ -55,11 +70,6 @@ async function main() {
     check(settings.bookingRules?.minNoticeHours === 24 && settings.bookingRules?.maxDaysAhead === 30 && settings.bookingRules?.bufferMinutes === 10, "settings: booking rules must be 24 h, 30 days and 10 min");
   }
   const stageIds = new Set(settings?.pipelineStages.map((s) => s.id));
-
-  // Counts: seeding twice must not create duplicates.
-  for (const [name, docs, expected] of [["teams", teamDocs, teams.length], ["users", userDocs, users.length], ["services", serviceDocs, services.length], ["clients", clientDocs, clients.length], ["availability", availabilityDocs, availability.length]]) {
-    check(Object.keys(docs).length === expected, `${name}: expected ${expected} documents, found ${Object.keys(docs).length}`);
-  }
 
   // Users and teams.
   for (const [uid, u] of Object.entries(userDocs)) {
@@ -102,12 +112,22 @@ async function main() {
   const slugs = Object.values(availabilityDocs).map((a) => a.bookingSlug);
   check(new Set(slugs).size === slugs.length, "booking links must be unique");
 
+  // Strict mode: the emulators hold exactly the seed, so a second seed created no duplicates.
+  if (strict) {
+    const authCount = (await auth.listUsers(1000)).users.length;
+    check(authCount === users.length, `strict: expected ${users.length} auth users, found ${authCount}`);
+    for (const [name, expected] of [["teams", teams.length], ["users", users.length], ["services", services.length], ["clients", clients.length], ["availability", availability.length]]) {
+      const count = (await db.collection(name).count().get()).data().count;
+      check(count === expected, `strict: ${name} has ${count} documents, expected ${expected}`);
+    }
+  }
+
   if (problems.length) {
     console.error(`Seed verification failed (${problems.length}):`);
     for (const p of problems) console.error(`  - ${p}`);
     process.exit(1);
   }
-  console.log(`Seed verification passed: ${users.length} accounts sign in with their role, and teams, services, clients, settings and availability follow the data model.`);
+  console.log(`Seed verification passed${strict ? " (strict)" : ""}: ${users.length} accounts sign in with their role, and teams, services, clients, settings and availability follow the data model.`);
 }
 
 main().catch((error) => {

@@ -9,6 +9,13 @@ import { SEED_PASSWORD, availability, clients, searchTokens, services, settings,
 const ts = (date) => (date ? Timestamp.fromDate(date) : null);
 
 async function upsertAuthUser(auth, user) {
+  // An account created by hand in the Auth emulator may already use this email with another uid.
+  try {
+    const byEmail = await auth.getUserByEmail(user.email);
+    if (byEmail.uid !== user.uid) await auth.deleteUser(byEmail.uid);
+  } catch (error) {
+    if (error.code !== "auth/user-not-found") throw error;
+  }
   const props = { email: user.email, password: SEED_PASSWORD, displayName: user.displayName, emailVerified: true, disabled: false };
   try {
     await auth.getUser(user.uid);

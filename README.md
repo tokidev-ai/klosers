@@ -34,7 +34,7 @@ npm run seed         # in a second terminal: loads sample data
 
 The Functions emulator uses port 5005 instead of the usual 5001, which Cisco AnyConnect and other tools often hold.
 
-Data is saved to `.emulator-data/` when you stop the emulators with Ctrl+C, and loaded on the next start. `npm run emulators:fresh` starts empty. Seeding again is safe: it resets the sample records without duplicating them.
+Data is saved to `.emulator-data/` when you stop the emulators with Ctrl+C, and loaded on the next start. `npm run emulators:fresh` starts empty. Seeding again is safe: it resets the sample records without duplicating them. If you created an account in the Auth emulator with one of the sample emails, the seed replaces it.
 
 ## Sample accounts
 
@@ -56,7 +56,9 @@ The seed also creates the company settings (Bs by default, 6.96 Bs per $us, the 
 npm run test:emulators
 ```
 
-This starts the emulators, seeds twice, checks the data against the data model, checks that every account signs in with its role, and calls the health function.
+This starts the emulators, seeds twice, checks the data against the data model in strict mode (exact totals, so no duplicates), checks that every account signs in with its role, and calls the health function.
+
+`npm run seed:verify` runs the same checks against emulators you are already using; it checks only the seeded records, so your own test data is fine.
 
 The seed and check scripts refuse to run against anything but local emulators and a `demo-` project.
 

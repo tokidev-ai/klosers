@@ -4,9 +4,12 @@
 export const SEED_PASSWORD = "klosers-local-123";
 
 const DAY = 24 * 60 * 60 * 1000;
-const todayUtc = new Date(new Date().toISOString().slice(0, 10) + "T14:00:00Z");
+/** Today's date in La Paz (UTC-4, no daylight saving), as YYYY-MM-DD. */
+export const laPazDate = (now = new Date()) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/La_Paz", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+const todayAt10LaPaz = new Date(`${laPazDate()}T14:00:00Z`);
 /** A date relative to today at 10:00 La Paz time, so overdue and today's follow-ups stay meaningful. */
-export const daysFromToday = (n) => new Date(todayUtc.getTime() + n * DAY);
+export const daysFromToday = (n) => new Date(todayAt10LaPaz.getTime() + n * DAY);
 const fixedDate = (iso) => new Date(`${iso}T14:00:00Z`);
 
 export const settings = {

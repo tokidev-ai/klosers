@@ -1,11 +1,16 @@
 // Calls the health function in the Functions emulator.
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { ROOT, emulatorConfig, useEmulators } from "./lib/emulator-guard.mjs";
 
 const { projectId } = useEmulators();
-const config = readFileSync(path.join(ROOT, "functions/src/config.ts"), "utf8");
-const region = config.match(/REGION\s*=\s*"([^"]+)"/)?.[1];
+const builtConfig = path.join(ROOT, "functions/lib/config.js");
+if (!existsSync(builtConfig)) {
+  console.error("Health check failed: build the functions first with npm run build:functions.");
+  process.exit(1);
+}
+const region = createRequire(import.meta.url)(builtConfig).REGION;
 const { host, port } = emulatorConfig().functions;
 const url = `http://${host}:${port}/${projectId}/${region}/health`;
 

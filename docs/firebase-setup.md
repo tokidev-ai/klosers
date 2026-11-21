@@ -39,7 +39,7 @@ gcloud billing projects link "$PROJECT_ID" --billing-account="$BILLING_ACCOUNT"
 
 Then, in the [Firebase console](https://console.firebase.google.com/project/leadport-dev):
 
-1. **Storage:** choose Get started and pick `us-central1`, the same region as the functions.
+1. **Storage:** choose Get started and pick `us-central1`, the same region as the functions. Until the bucket exists, a plain `npx firebase deploy --project prod` fails on the Storage rules; deploy with `--only functions,firestore,hosting` instead.
 2. **Hosting:** choose Get started.
 
 ## 2. Sign-in providers and App Check (#56)

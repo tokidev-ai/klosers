@@ -14,16 +14,18 @@ export function emulatorConfig() {
 
 function hostOf(hostAndPort = "") {
   if (hostAndPort.startsWith("[")) return hostAndPort.slice(1, hostAndPort.indexOf("]"));
-  return hostAndPort.split(":")[0];
+  const parts = hostAndPort.split(":");
+  // "::1:8080" is an IPv6 host without brackets: everything before the last colon.
+  return parts.length > 2 ? parts.slice(0, -1).join(":") : parts[0];
 }
 
 /** Points the Admin SDK at the local emulators and refuses anything else. */
 export function useEmulators() {
   const cfg = emulatorConfig();
   // Local scripts never need Google Cloud credentials; skip the metadata server lookup.
-  process.env.METADATA_SERVER_DETECTION ??= "none";
-  process.env.FIRESTORE_EMULATOR_HOST ??= `${cfg.firestore.host}:${cfg.firestore.port}`;
-  process.env.FIREBASE_AUTH_EMULATOR_HOST ??= `${cfg.auth.host}:${cfg.auth.port}`;
+  process.env.METADATA_SERVER_DETECTION ||= "none";
+  process.env.FIRESTORE_EMULATOR_HOST ||= `${cfg.firestore.host}:${cfg.firestore.port}`;
+  process.env.FIREBASE_AUTH_EMULATOR_HOST ||= `${cfg.auth.host}:${cfg.auth.port}`;
 
   for (const name of ["FIRESTORE_EMULATOR_HOST", "FIREBASE_AUTH_EMULATOR_HOST"]) {
     if (!LOCAL_HOSTS.has(hostOf(process.env[name]))) {
