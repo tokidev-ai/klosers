@@ -1,8 +1,92 @@
 rules_version = '2';
 
 // Every path starts from deny. Per-collection rules are added with the features that use them.
+//
+// The role comes from the custom claim on the user's token (`request.auth.token.role`), which only
+// server code can set. Everything else, including whether a user is still active, comes from the
+// user's profile at `users/{uid}`, so deactivating a user takes effect on their next request.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---- Helpers ----
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profilePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    // Signed in, with a profile that is not deactivated. Every rule below starts from this.
+    function isActive() {
+      return signedIn()
+        && exists(profilePath())
+        && get(profilePath()).data.status == 'active';
+    }
+
+    function hasRole(role) {
+      return isActive() && request.auth.token.role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isTeamLead() {
+      return hasRole('team_lead');
+    }
+
+    // The signed-in user belongs to this team. Admins belong to no team, so use `canAccessTeam`
+    // when admins should pass too.
+    function inTeam(teamId) {
+      return isActive() && teamId in get(profilePath()).data.teamIds;
+    }
+
+    function canAccessTeam(teamId) {
+      return isAdmin() || inTeam(teamId);
+    }
+
+    function isSelf(uid) {
+      return isActive() && request.auth.uid == uid;
+    }
+
+    // ---- Collections ----
+
+    // Company-wide settings. Read-only from the app; admins change them through a Cloud Function.
+    match /settings/{docId} {
+      allow read: if isActive();
+    }
+
+    // A profile is readable by its owner, by admins, and by a team lead for members of their team.
+    // Roles, teams and status are only ever written by Cloud Functions.
+    match /users/{uid} {
+      allow get: if isSelf(uid)
+        || isAdmin()
+        || (isTeamLead() && resource.data.teamIds.hasAny(get(profilePath()).data.teamIds));
+      allow list: if isAdmin()
+        || (isTeamLead() && resource.data.teamIds.hasAny(get(profilePath()).data.teamIds));
+    }
+
+    // Members and team leads see their own teams, admins see all. Only a Cloud Function sets a lead.
+    match /teams/{teamId} {
+      allow read: if canAccessTeam(teamId);
+    }
+
+    // Invitations are created, accepted and revoked by Cloud Functions. Admins can list them.
+    match /invitations/{inviteId} {
+      allow read: if isAdmin();
+    }
+
+    // Users see the active services of their own teams, admins see every service. The catalog is
+    // edited by admins through a Cloud Function until the services feature adds its own rules.
+    match /services/{serviceId} {
+      allow read: if isAdmin()
+        || (inTeam(resource.data.teamId) && resource.data.active == true);
+    }
+
+    // Anything not matched above stays denied, including clients, bookings, availability, client
+    // types, scrape jobs, leads and stats, until the feature that needs them adds its rules.
     match /{document=**} {
       allow read, write: if false;
     }

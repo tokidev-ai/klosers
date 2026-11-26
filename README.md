@@ -145,4 +145,4 @@ The predeploy hooks in `firebase.json` build the app and the functions first. CI
 npx firebase deploy --project prod --only hosting,functions,firestore
 ```
 
-Rules and indexes in `firestore/` are deployed with the `firestore` target. The rules start from deny-all, so the app cannot read or write data until the rules for each collection are added. Add the rules tests for each collection to `firestore/tests/rules.test.mjs` in the same change.
+Rules and indexes in `firestore/` are deployed with the `firestore` target. The rules start from deny-all and `firestore.rules` has helpers for signed-in, active, role (read from the token's `role` claim) and team checks. Today `settings`, `users`, `teams`, `invitations` and `services` are readable by the right people and never writable from the app; every other collection stays denied. Add the rules and the rules tests for each new collection to `firestore/tests/rules.test.mjs` in the same change.
